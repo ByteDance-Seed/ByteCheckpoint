@@ -54,7 +54,7 @@ ByteCheckpoint is easy to use and efficient with:
 Install ByteCheckpoint from source.
 ```
 git clone https://github.com/ByteDance-Seed/ByteCheckpoint.git
-cd bytecheckpoint
+cd ByteCheckpoint
 pip install -e .
 ```
 
