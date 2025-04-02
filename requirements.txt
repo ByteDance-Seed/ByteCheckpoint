@@ -1,7 +1,6 @@
-torch
+numpy
+safetensors
+typing_extensions
 grpcio==1.69.0
-numpy==2.2.4
 protobuf==3.20.3
-safetensors==0.5.3
-setuptools==69.5.1
-typing_extensions==4.13.0
+
