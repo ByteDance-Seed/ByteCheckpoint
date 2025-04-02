@@ -42,14 +42,14 @@ ByteCheckpoint is easy to use and efficient with:
 
 ✔ **Comprehensive Toolset**: Provides utilities for checkpoint merging/conversion/modification and metadata/tensor file inspection. Enables flexible checkpoint transfer and management.
 
-# 📰 News
+## 📰 News
 [2025/04] We officially released ByteCheckpoint! 🔥 
 
 [2024/12] ByteCheckpoint is accepted to NSDI 2025.
 
-# 🚀 Getting started
+## 🚀 Getting started
 
-## Installation
+### Installation
 
 Install ByteCheckpoint from source.
 ```
@@ -63,7 +63,7 @@ Install ByteCheckpoint from PyPI.
 pip install bytecheckpoint
 ```
 
-## Basic Usage
+### Basic Usage
 
 We introduce how to use Bytecheckpoint to save, load, and merge checkpoint.
 
@@ -72,7 +72,7 @@ In ByteCheckpoint, a checkpoint consists of three parts (folders):
 - `optimizer`: It contains optimizer checkpoint, including one ``.metadata`` checkpoint metadata file and multiple `.distcp` tensor data files.   
 - `extra_state`: It contains user-saved pickable objects, e.g., the dataloader state dictionary and RNG states.  
 
-### Save and Load Checkpoint
+#### Save and Load Checkpoint
 
 Get model, optimizer, and extra states (RNG states, learning rate scheduler) from training code.
 ```python
@@ -95,7 +95,7 @@ bcp.load(ckpt_path, checkpoint_state, framework="fsdp")
 torch.set_rng_state(checkpoint_state["extra_state"]['torch_rng_state'])
 ```
 
-### Training Code Example (FSDP)
+#### Training Code Example (FSDP)
 
 A simple single-machine FSDP training demo with ByteCheckpoint is on [demo/fsdp_save_reshard.py](demo/fsdp_save_reshard.py)
 
@@ -113,7 +113,7 @@ torchrun --master_addr=localhost --master_port=6000 --nproc_per_node=4 --nnodes=
 
 For multi-machine training, we recommend operating checkpoint in a shared file system that supports POSIX semantics, such as [NFS](https://documentation.ubuntu.com/server/how-to/networking/install-nfs/index.html).
 
-### Merge Model checkpoint
+#### Merge Model checkpoint
 
 To merge model checkpoint, you can use `scripts/merge_bcp.py`
 
@@ -127,26 +127,26 @@ python3 scripts/merge_bcp.py --framework fsdp \
 --model_only
 ```
 
-# 🔧 Advanced Usage Guide
+## 🔧 Advanced Usage Guide
 
-## API Arguments
+### API Arguments
 - Enable `fast_saving` and `fast_loading` to use asynchronous and parallel I/O techniques.
 - Enable `save_decomposed_model_optimizer` and `load_decomposed_model_optimizer` for FSDP (`use_orig_params=True` is required) to obtain model/optimizer state dict without additional communication and GPU-CPU synchronization.
 - Pass the `role` keyword (e.g., actor, critic) to support checkpointing in multi-role training scenarios, such as PPO training.
 - Enable `strict` in `load` API to check whether the fqns in a given state_dict are strictly the same as those recorded in the .metadata file. 
 
-## Configuration
+### Configuration
 - Enable `BYTECHECKPOINT_ENABLE_TREE_TOPO` to improve the stability of large-scale planning for model/optimizer planning.
 - Enable `BYTECHECKPOINT_ENABLE_PINNED_MEM_D2H` to use the pinned CPU memory pool to accelerate D2H tensor copying.
 - Adjust `BYTECHECKPOINT_STORE_WORKER_COUNT` and `BYTECHECKPOINT_LOAD_WORKER_COUNT` to tune the I/O performance.
 
 Please refer to [config.py](bytecheckpoint/config.py) for more details.
 
-# 🤝 Contribution Guide
+## 🤝 Contribution Guide
 
 Community contributions are welcome. Please checkout [Contribution Guidance](CONTRIBUTING.md).
 
-## Code Formatting
+### Code Formatting
 
 We use `ruff` to enforce strict code formatting when reviewing PRs. To reformat your code locally, make sure you have installed the latest version of `ruff`.
 ```
@@ -158,16 +158,16 @@ Then you can format code with:
 bash format_code.sh
 ```
 
-## Testing
+### Testing
 Run local tests with:
 ```
 bash test.sh
 ```
 
-# 📄 License
+## 📄 License
 This project is licensed under Apache License 2.0. See the `LICENSE` file for details.
 
-# 😊 Citation and Acknowledgement
+## 😊 Citation and Acknowledgement
 If you find this project helpful, please give us a star ⭐ and cite our [paper](https://arxiv.org/pdf/2407.20143):
 
 ```bibtex
@@ -181,6 +181,6 @@ If you find this project helpful, please give us a star ⭐ and cite our [paper]
 
 ByteCheckpoint is inspired by the design of [PyTorch Distributed Checkpoint (DCP)](https://pytorch.org/docs/stable/distributed.checkpoint.html).
 
-# 🌱 About [ByteDance Seed Team](https://team.doubao.com/)
+## 🌱 About [ByteDance Seed Team](https://team.doubao.com/)
 
 Founded in 2023, ByteDance Seed Team is dedicated to crafting the industry's most advanced AI foundation models. The team aspires to become a world-class research team and make significant contributions to the advancement of science and society.
