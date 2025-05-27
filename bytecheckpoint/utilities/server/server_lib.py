@@ -218,6 +218,15 @@ def _concat_ip_and_port(ip: str, port: int):
         return f"[{ip}]:{port}"
 
 
+def get_host_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
+
 def _get_local_ip():
     """
     Get local machine's IP address
@@ -225,11 +234,7 @@ def _get_local_ip():
     Returns:
         str: Local IP address
     """
-    try:
-        return socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
-    except socket.gaierror:
-        return socket.getaddrinfo(socket.gethostname(), None, family=socket.AF_INET6)[0][4][0]
-
+    return get_host_ip()
 
 @dataclasses.dataclass
 class _AsyncObj:
