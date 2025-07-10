@@ -7,7 +7,7 @@ except ImportError:
     from distutils.core import Extension, setup  # noqa: F401
 
 NAME = "bytecheckpoint"
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REQUIRES = [
     "torch>=2.1.0,<=2.5.0",
