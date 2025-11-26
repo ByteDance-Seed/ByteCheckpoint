@@ -16,6 +16,7 @@
 ################################################################################
 
 import io
+import os
 import pickle
 import threading
 from typing import DefaultDict
@@ -25,6 +26,11 @@ import torch
 from bytecheckpoint.utilities.logger import get_bytecheckpoint_logger
 
 logger = get_bytecheckpoint_logger()
+
+PLATFORM = os.environ.get("PLATFORM", "cuda").lower()
+if PLATFORM not in {"cuda", "musa"}:
+    logger.warning("Unsupported PLATFORM=%s, fallback to cuda", PLATFORM)
+    PLATFORM = "cuda"
 
 if hasattr(torch.storage, "TypedStorage"):
     TypedStorage = torch.storage.TypedStorage
@@ -48,11 +54,45 @@ elif torch.__version__ >= "1.11":
         return o._storage if isinstance(o, TypedStorage) else o
 
 
-try:
-    lib = torch.cuda.cudart()
-except Exception as e:
-    logger.warning("Get exception when importing torch.cuda.cudart %s", e)
-    lib = None
+if PLATFORM == "cuda":
+
+    def _load_platform_runtime():
+        """
+        Load CUDA runtime library if available.
+        """
+        try:
+            getter = getattr(torch.cuda, "cudart", None)
+            if getter is None:
+                raise AttributeError("torch.cuda.cudart missing")
+            return getter()
+        except Exception as e:
+            logger.warning("Failed loading CUDA runtime: %s", e)
+            return None
+
+    _host_register_fn = "cudaHostRegister"
+    _host_unregister_fn = "cudaHostUnregister"
+
+elif PLATFORM == "musa":
+
+    def _load_platform_runtime():
+        """
+        Load MUSA runtime library if available.
+        """
+        try:
+            musa_module = getattr(torch, "musa", None)
+            getter = getattr(musa_module, "musart", None) if musa_module else None
+            if getter is None:
+                raise AttributeError("torch.musa.musart missing")
+            return getter()
+        except Exception as e:
+            logger.warning("Failed loading MUSA runtime: %s", e)
+            return None
+
+    _host_register_fn = "musaHostRegister"
+    _host_unregister_fn = "musaHostUnregister"
+
+
+lib = _load_platform_runtime()
 
 
 class PinnedMemoryPool:
@@ -82,8 +122,10 @@ class PinnedMemoryPool:
                 cpu_tensor = cpu_tensor.share_memory_()
                 # Make memory of t pinned
                 if lib is not None and nbytes != 0:
-                    err = lib.cudaHostRegister(cpu_tensor.data_ptr(), cpu_tensor.numel() * cpu_tensor.element_size(), 0)
-                    assert err == 0, f"CUDA error in allocating pinned memory: {err}"
+                    register = getattr(lib, _host_register_fn, None)
+                    assert register is not None, f"{PLATFORM} host register function missing"
+                    err = register(cpu_tensor.data_ptr(), cpu_tensor.numel() * cpu_tensor.element_size(), 0)
+                    assert err == 0, f"{PLATFORM} error in allocating pinned memory: {err}"
                 tensor_storage = untyped_storage(cpu_tensor)
                 s.add(tensor_storage)
             return s.pop()
@@ -158,7 +200,7 @@ class PinnedMemoryPool:
                 return storage._cdata
             else:
                 raise AssertionError(
-                    "Passing a non torch.UntypedStorage/TpedStorage type into Pinned memory D2H function."
+                    "Passing a non torch.UntypedStorage/TypedStorage type into Pinned memory D2H function."
                 )
 
         b = io.BytesIO()
@@ -207,7 +249,9 @@ class PinnedMemoryPool:
                 for tensor_storage in storages:
                     # Unregister the CPU memory.
                     if lib is not None and nbytes != 0:
-                        err = lib.cudaHostUnregister(tensor_storage.data_ptr())
-                        assert err == 0, f"CUDA error in releasing pinned memory: {err}"
+                        unregister = getattr(lib, _host_unregister_fn, None)
+                        assert unregister is not None, f"{PLATFORM} host unregister function missing"
+                        err = unregister(tensor_storage.data_ptr())
+                        assert err == 0, f"{PLATFORM} error in releasing pinned memory: {err}"
                 storages.clear()
             self._m.clear()

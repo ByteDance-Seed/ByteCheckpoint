@@ -29,6 +29,10 @@ except ImportError as e:
 
 import bytecheckpoint as bcp
 
+PLATFORM = os.environ.get("PLATFORM", "cuda").lower()
+if PLATFORM not in {"cuda", "musa"}:
+    PLATFORM = "cuda"
+
 CKPT_PATH = "./tmp_checkpoint_dir_fsdp2"
 HIDDEN_SIZE = 512
 LAYER_NUM = 8
@@ -70,7 +74,10 @@ if __name__ == "__main__":
     rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
-    torch.cuda.set_device(rank)
+    if PLATFORM == "cuda":
+        torch.cuda.set_device(rank)
+    elif PLATFORM == "musa":
+        torch.musa.set_device(rank)
 
     # Define and initalize FSDP model and optimizer
     model = Model(HIDDEN_SIZE, LAYER_NUM).to(rank)
@@ -86,7 +93,7 @@ if __name__ == "__main__":
         }
 
         for iter in range(args.iterations):
-            loss = model(torch.ones(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda")).sum()
+            loss = model(torch.ones(HIDDEN_SIZE, HIDDEN_SIZE, device=PLATFORM)).sum()
             loss.backward()
             optimizer.step()
             # Save ckpt every step
@@ -103,7 +110,7 @@ if __name__ == "__main__":
         bcp.load(f"{args.ckpt_path}/global_step_0", checkpoint_state, framework="fsdp2", fast_loading=True)
         torch.set_rng_state(checkpoint_state["extra_state"]["torch_rng_state"])
         for iter in range(args.iterations):
-            loss = model(torch.ones(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda")).sum()
+            loss = model(torch.ones(HIDDEN_SIZE, HIDDEN_SIZE, device=PLATFORM)).sum()
             loss.backward()
             optimizer.step()
             # Save ckpt every step
