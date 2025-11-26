@@ -32,6 +32,8 @@ import bytecheckpoint as bcp
 PLATFORM = os.environ.get("PLATFORM", "cuda").lower()
 if PLATFORM not in {"cuda", "musa"}:
     PLATFORM = "cuda"
+if PLATFORM == "musa":
+    import torch_musa  # noqa: F401
 
 CKPT_PATH = "./tmp_checkpoint_dir_fsdp2"
 HIDDEN_SIZE = 512
