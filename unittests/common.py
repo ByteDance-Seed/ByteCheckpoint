@@ -218,7 +218,7 @@ class TestFSDPBase(MultiProcessTestCase):
                 if not hasattr(torch, "musa") or not torch.musa.is_available() or torch.musa.device_count() < self.world_size:
                     sys.exit(TEST_SKIPS[f"multi-gpu-{self.world_size}"].exit_code)
 
-        if self.backend not in ["nccl", "gloo", "mpi", "cpu:gloo,cuda:nccl"]:
+        if self.backend not in ["mccl", "nccl", "gloo", "mpi", "cpu:gloo,cuda:nccl,musa:mccl"]:
             raise RuntimeError(f"Backend {self.backend} not supported!")
 
         dist.init_process_group(
@@ -246,7 +246,7 @@ class TestFSDPBase(MultiProcessTestCase):
 
 
 def torchrun_setup():
-    dist.init_process_group("nccl")
+    dist.init_process_group(self.backend)
     if PLATFORM == "cuda":
         torch.cuda.set_device(dist.get_rank())
     elif PLATFORM == "musa":
