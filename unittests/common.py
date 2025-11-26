@@ -39,6 +39,7 @@ if PLATFORM == "cuda":
     DEVICE_TYPE = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else "cpu"
     PG_BACKEND = "nccl" if DEVICE_TYPE == "cuda" else "gloo"
 elif PLATFORM == "musa":
+    import torch_musa  # noqa: F401
     DEVICE_TYPE = "musa" if hasattr(torch, "musa") and torch.musa.is_available() and torch.musa.device_count() > 1 else "cpu"
     PG_BACKEND = "mccl" if DEVICE_TYPE == "musa" else "gloo"
 
