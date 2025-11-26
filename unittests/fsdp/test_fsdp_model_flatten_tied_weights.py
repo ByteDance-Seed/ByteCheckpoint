@@ -27,7 +27,7 @@ from torch.testing._internal.common_utils import run_tests
 
 from bytecheckpoint import FSDPCheckpointer
 from bytecheckpoint.engine import _store_engine
-from unittests.common import Layer, Model, TestFSDPBase, diff, with_comms
+from unittests.common import DEVICE_TYPE, Layer, Model, TestFSDPBase, diff, with_comms
 
 TMP_DIR = "tmp_dir"
 NUM_DEVICES = 8
@@ -58,7 +58,7 @@ class TestFSDPSaveLoad1(TestFSDPBase):
         optimizer.zero_grad()
         # do train steps
         for i in range(STEPS):
-            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda", dtype=torch.float16)).sum()
+            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device=DEVICE_TYPE, dtype=torch.float16)).sum()
             loss.backward()
             optimizer.step()
 

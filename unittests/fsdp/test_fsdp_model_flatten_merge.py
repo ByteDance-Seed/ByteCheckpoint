@@ -31,7 +31,7 @@ from torch.testing._internal.common_utils import run_tests
 from bytecheckpoint import FSDPCheckpointer
 from bytecheckpoint.engine import _store_engine
 from bytecheckpoint.utilities.ckpt_format.merge_tool import bytecheckpoint_ckpt_to_pytorch_ckpt
-from unittests.common import Layer, Model, TestFSDPBase, diff, with_comms
+from unittests.common import DEVICE_TYPE, Layer, Model, TestFSDPBase, diff, with_comms
 
 CKPT_DIR_DISTCP = "./fsdp_flatten_distcp"
 CKPT_DIR_MERGE = "./fsdp_flatten_merge"
@@ -62,7 +62,7 @@ class TestFSDPSaveLoad(TestFSDPBase):
         optimizer_1.zero_grad()
         # do train steps
         for i in range(STEPS):
-            loss = model_1(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda")).sum()
+            loss = model_1(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device=DEVICE_TYPE)).sum()
             loss.backward()
             optimizer_1.step()
             optimizer_1.zero_grad()

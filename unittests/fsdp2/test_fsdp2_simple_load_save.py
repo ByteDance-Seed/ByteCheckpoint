@@ -21,7 +21,7 @@ from torch.testing._internal.common_utils import run_tests
 
 from bytecheckpoint import FSDP2Checkpointer
 from bytecheckpoint.engine import _store_engine
-from unittests.common import Model, TestFSDPBase, diff, with_comms
+from unittests.common import DEVICE_TYPE, PLATFORM, Model, TestFSDPBase, diff, with_comms
 
 TMP_DIR = "tmp_dir"
 NUM_DEVICES = 8
@@ -46,7 +46,7 @@ class TestFSDP2SaveLoad(TestFSDPBase):
         optimizer.zero_grad()
         # do one step
         for _ in range(STEPS):
-            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda")).sum()
+            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device=DEVICE_TYPE)).sum()
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -54,10 +54,16 @@ class TestFSDP2SaveLoad(TestFSDPBase):
         model_state_dict_before_save = model.state_dict()
         optim_state_dict_before_save = optimizer.state_dict()
         # Save
+        if PLATFORM == "cuda":
+            current_device = torch.cuda.current_device()
+        elif PLATFORM == "musa":
+            current_device = torch.musa.current_device()
+        else:
+            current_device = 0
         ckpt_state = {
             "model": model,
             "optimizer": optimizer,
-            "extra_state": {"a": torch.tensor(1, device=f"cuda:{torch.cuda.current_device()}")},
+            "extra_state": {"a": torch.tensor(1, device=f"{PLATFORM}:{current_device}")},
         }
         FSDP2Checkpointer.save(TMP_DIR, ckpt_state, fast_saving=True)
         _store_engine.cleanup_resources()

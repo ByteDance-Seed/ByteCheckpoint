@@ -20,6 +20,8 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Dict, Tuple, Union
 
+import os
+
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -29,8 +31,17 @@ from torch.testing._internal.common_distributed import (
     MultiProcessTestCase,
 )
 
-DEVICE_TYPE = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else "cpu"
-PG_BACKEND = "nccl" if DEVICE_TYPE == "cuda" else "gloo"
+PLATFORM = os.environ.get("PLATFORM", "cuda").lower()
+if PLATFORM not in {"cuda", "musa"}:
+    PLATFORM = "cuda"
+
+if PLATFORM == "cuda":
+    DEVICE_TYPE = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else "cpu"
+    PG_BACKEND = "nccl" if DEVICE_TYPE == "cuda" else "gloo"
+elif PLATFORM == "musa":
+    import torch_musa  # noqa: F401
+    DEVICE_TYPE = "musa" if hasattr(torch, "musa") and torch.musa.is_available() and torch.musa.device_count() > 1 else "cpu"
+    PG_BACKEND = "mccl" if DEVICE_TYPE == "musa" else "gloo"
 
 NUM_DEVICES = 4
 
@@ -168,9 +179,17 @@ def with_comms(func: TestFunc) -> TestFunc:
 
     @wraps(func)  # pyre-ignore[6]
     def wrapper(self, *args: Tuple[object], **kwargs: Dict[str, Any]) -> None:  # type: ignore[misc]
-        # if backend not specified, and cuda available, then use nccl, else gloo
-        if torch.cuda.is_available() and torch.cuda.device_count() >= self.world_size:
-            self.device_type = "cuda"
+        # if backend not specified, and cuda/musa available, then use nccl, else gloo
+        if PLATFORM == "cuda":
+            if torch.cuda.is_available() and torch.cuda.device_count() >= self.world_size:
+                self.device_type = "cuda"
+            else:
+                self.device_type = "cpu"
+        elif PLATFORM == "musa":
+            if hasattr(torch, "musa") and torch.musa.is_available() and torch.musa.device_count() >= self.world_size:
+                self.device_type = "musa"
+            else:
+                self.device_type = "cpu"
         else:
             self.device_type = "cpu"
 
@@ -191,10 +210,15 @@ class TestFSDPBase(MultiProcessTestCase):
         return PG_BACKEND
 
     def init_pg(self) -> None:
-        if "nccl" in self.backend and torch.cuda.device_count() < self.world_size:
-            sys.exit(TEST_SKIPS[f"multi-gpu-{self.world_size}"].exit_code)
+        if "nccl" in self.backend:
+            if PLATFORM == "cuda":
+                if torch.cuda.device_count() < self.world_size:
+                    sys.exit(TEST_SKIPS[f"multi-gpu-{self.world_size}"].exit_code)
+            elif PLATFORM == "musa":
+                if not hasattr(torch, "musa") or not torch.musa.is_available() or torch.musa.device_count() < self.world_size:
+                    sys.exit(TEST_SKIPS[f"multi-gpu-{self.world_size}"].exit_code)
 
-        if self.backend not in ["nccl", "gloo", "mpi", "cpu:gloo,cuda:nccl"]:
+        if self.backend not in ["mccl", "nccl", "gloo", "mpi", "cpu:gloo,cuda:nccl,musa:mccl"]:
             raise RuntimeError(f"Backend {self.backend} not supported!")
 
         dist.init_process_group(
@@ -207,7 +231,10 @@ class TestFSDPBase(MultiProcessTestCase):
 
         # set device for nccl pg for collectives
         if "nccl" in self.backend:
-            torch.cuda.set_device(self.rank)
+            if PLATFORM == "cuda":
+                torch.cuda.set_device(self.rank)
+            elif PLATFORM == "musa":
+                torch.musa.set_device(self.rank)
 
     def destroy_pg(self) -> None:
         dist.barrier()
@@ -219,8 +246,11 @@ class TestFSDPBase(MultiProcessTestCase):
 
 
 def torchrun_setup():
-    dist.init_process_group("nccl")
-    torch.cuda.set_device(dist.get_rank())
+    dist.init_process_group(self.backend)
+    if PLATFORM == "cuda":
+        torch.cuda.set_device(dist.get_rank())
+    elif PLATFORM == "musa":
+        torch.musa.set_device(dist.get_rank())
 
 
 def torchrun_cleanup():

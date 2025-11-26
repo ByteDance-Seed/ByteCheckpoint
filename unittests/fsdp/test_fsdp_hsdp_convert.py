@@ -33,7 +33,7 @@ from torch.testing._internal.common_utils import run_tests
 from bytecheckpoint import FSDPCheckpointer
 from bytecheckpoint.engine import _store_engine
 from bytecheckpoint.utilities.ckpt_format.merge_tool import bytecheckpoint_ckpt_to_pytorch_ckpt
-from unittests.common import Layer, Model, TestFSDPBase, diff, with_comms
+from unittests.common import DEVICE_TYPE, Layer, Model, TestFSDPBase, diff, with_comms
 
 TMP_DIR = "tmp_dir"
 NUM_DEVICES = 8
@@ -54,7 +54,7 @@ class TestFSDPSaveLoadFlatten(TestFSDPBase):
         torch.manual_seed(0)
         model = Model(HIDDEN_SIZE, LAYER_NUM).to(rank)
         # model = FSDP(model).to(torch.bfloat16)
-        device_mesh = init_device_mesh("cuda", mesh_shape=(2, 4), mesh_dim_names=["dp", "fsdp"])
+        device_mesh = init_device_mesh(DEVICE_TYPE, mesh_shape=(2, 4), mesh_dim_names=["dp", "fsdp"])
         model = FSDP(
             model,
             mixed_precision=MixedPrecision(param_dtype=torch.float16, cast_forward_inputs=True),
@@ -68,7 +68,7 @@ class TestFSDPSaveLoadFlatten(TestFSDPBase):
         optimizer.zero_grad()
         # do train steps
         for i in range(STEPS):
-            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda", dtype=torch.float16)).sum()
+            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device=DEVICE_TYPE, dtype=torch.float16)).sum()
             loss.backward()
             optimizer.step()
 
@@ -79,7 +79,7 @@ class TestFSDPSaveLoadFlatten(TestFSDPBase):
         FSDPCheckpointer.save(f"{TMP_DIR}/hsdp", ckpt_state, fast_saving=False, save_decomposed_model_optimizer=True)
         _store_engine.cleanup_resources()
 
-        device_mesh_load = init_device_mesh("cuda", mesh_shape=(8,), mesh_dim_names=["fsdp"])
+        device_mesh_load = init_device_mesh(DEVICE_TYPE, mesh_shape=(8,), mesh_dim_names=["fsdp"])
         model_load = Model(HIDDEN_SIZE, LAYER_NUM).to(rank)
         model_load = FSDP(
             model_load,
@@ -137,7 +137,7 @@ class TestFSDPSaveLoadNaive(TestFSDPBase):
         torch.manual_seed(0)
         model = Model(HIDDEN_SIZE, LAYER_NUM).to(rank)
         # model = FSDP(model).to(torch.bfloat16)
-        device_mesh = init_device_mesh("cuda", mesh_shape=(2, 4), mesh_dim_names=["dp", "fsdp"])
+        device_mesh = init_device_mesh(DEVICE_TYPE, mesh_shape=(2, 4), mesh_dim_names=["dp", "fsdp"])
         model = FSDP(
             model,
             mixed_precision=MixedPrecision(param_dtype=torch.float16, cast_forward_inputs=True),
@@ -151,7 +151,7 @@ class TestFSDPSaveLoadNaive(TestFSDPBase):
         optimizer.zero_grad()
         # do train steps
         for i in range(STEPS):
-            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device="cuda", dtype=torch.float16)).sum()
+            loss = model(torch.rand(HIDDEN_SIZE, HIDDEN_SIZE, device=DEVICE_TYPE, dtype=torch.float16)).sum()
             loss.backward()
             optimizer.step()
 
@@ -162,7 +162,7 @@ class TestFSDPSaveLoadNaive(TestFSDPBase):
         FSDPCheckpointer.save(f"{TMP_DIR}/hsdp", ckpt_state, fast_saving=False, save_decomposed_model_optimizer=False)
         _store_engine.cleanup_resources()
 
-        device_mesh_load = init_device_mesh("cuda", mesh_shape=(8,), mesh_dim_names=["fsdp"])
+        device_mesh_load = init_device_mesh(DEVICE_TYPE, mesh_shape=(8,), mesh_dim_names=["fsdp"])
         model_load = Model(HIDDEN_SIZE, LAYER_NUM).to(rank)
         model_load = FSDP(
             model_load,
