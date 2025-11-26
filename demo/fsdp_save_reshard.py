@@ -70,7 +70,13 @@ if __name__ == "__main__":
     # Start Distributed PyTorch
     rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
-    dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
+    if PLATFORM == "cuda":
+        backend = "nccl"
+    elif PLATFORM == "musa":
+        backend = "mccl"
+    else:
+        backend = "nccl"
+    dist.init_process_group(backend=backend, rank=rank, world_size=world_size)
     if PLATFORM == "cuda":
         torch.cuda.set_device(rank)
     elif PLATFORM == "musa":
