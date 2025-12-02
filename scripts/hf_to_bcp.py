@@ -77,6 +77,6 @@ if __name__ == "__main__":
 
     ckpt_state = {"model": MockedModel(final_state_dict)}
     # Save it
-    FSDP2Checkpointer.save(path=args.save_dir, checkpoint_state=ckpt_state, modifying_ckpt=True)
+    FSDP2Checkpointer.save(path=args.save_dir, checkpoint_state=ckpt_state, fast_saving=True)
 
     cleanup()
