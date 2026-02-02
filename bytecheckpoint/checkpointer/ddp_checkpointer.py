@@ -87,8 +87,8 @@ class DDPCheckpointer(BaseCheckpointer):
         logger.info("Start save function call. ")
 
         # Check version.
-        assert torch.__version__.strip() < "2.6.0" and torch.__version__.strip() >= "2.1.0", (
-            "ByteCheckpoint now only support torch version from 2.1 to 2.5"
+        assert "2.1.0" <= torch.__version__.strip(), (
+            "ByteCheckpoint now only support torch version from 2.1 and above"
         )
         # Check role.
         if role and role not in SUPPORTED_ROLE_SUFFIX_TYPES:
