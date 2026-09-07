@@ -76,7 +76,7 @@ class FSDPLoadPlanner(DefaultLoadPlanner):
     """
 
     def __init__(self, strict: bool):
-        super().__init__(strict)
+        super().__init__(strict=strict)
 
     def create_local_plan(self) -> LoadPlan:
         return create_default_local_load_plan(self.state_dict, self.metadata, self.strict)
